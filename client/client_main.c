@@ -48,13 +48,17 @@ int main(int argc, char **argv) {
         query_info *info = get_query_info(result);
         if(info == NULL) continue;
         char *request = build_client_json_request(info);
+        puts("Request:");
         puts(request);
+        puts("");
         send_message(server_fd, request);
         bzero(response, BUFSIZ);
         count = recv(server_fd, response, BUFSIZ, 0);
         long content_length = strtol(response, NULL, 10);
         char *response_json = receive_message(server_fd, content_length);
+        puts("Response:");
         puts(response_json);
+        puts("");
         bzero(response_string, RESPONSE_BUFFER_SIZE);
         parse_json_response(response_json, response_string);
         puts(response_string);
