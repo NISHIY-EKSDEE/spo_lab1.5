@@ -40,7 +40,7 @@ void receive_message(char *client_message_part, int32_t accepted_socket, char *r
         long len = recv(accepted_socket, client_message_part, BUFSIZ, 0);
         strcat(request_json, client_message_part);
         remain_data -= len;
-        printf("⬇ Received %ld bytes of request... Remaining: %ld\n\n", len, remain_data);
+        // printf("⬇ Received %ld bytes of request... Remaining: %ld\n\n", len, remain_data);
     }
     puts(request_json);
 }
@@ -56,7 +56,7 @@ void send_message(int32_t client_socket, char *message) {
         offset += packet_size;
         if (write(client_socket, data, packet_size) < 0) break;
         remain_data -= packet_size;
-        printf("⬆ Sent %d bytes of response... Remaining: %lu\n\n", packet_size, remain_data);
+        // printf("⬆ Sent %d bytes of response... Remaining: %lu\n\n", packet_size, remain_data);
     } while (remain_data > 0);
 }
 
@@ -68,7 +68,7 @@ void work_with_client(client_arguments *args) {
             write(args->client_socket, "Bad request!", 12);
             continue;
         }
-        printf("Content length: %lu bytes\n", content_length);
+        // printf("Content length: %lu bytes\n", content_length);
         char request_json[content_length];
         bzero(&request_json, content_length);
         receive_message(client_message_part, args->client_socket, request_json, content_length);
@@ -115,7 +115,6 @@ char *execute_command(query_info *info, datafile *data) {
     }
     if (strcmp(command, "create") == 0) {
         if (info->has_relation) {
-            printf("Has relation\n");
             //matcher on nodes and relation creation
             linked_list *node_a_ptr = init_list();
             linked_list *node_b_ptr = init_list();

@@ -36,9 +36,9 @@ int main(int argc, char **argv) {
             perror("cypher_parse");
             return EXIT_FAILURE;
         }
-        puts("");
-        cypher_parse_result_fprint_ast(result, stdout, 100, NULL, 0);
-        puts("");
+        // puts("");
+        // cypher_parse_result_fprint_ast(result, stdout, 100, NULL, 0);
+        // puts("");
         errors = cypher_parse_result_nerrors(result);
         if (errors > 0) {
             puts("Unknown command");
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
         free_query_info(info);
         cypher_parse_result_free(result);
     }
-    printf("Total allocated memory: %llu (bytes)\n", get_all());
-    printf("Max allocated memory: %llu (bytes)\n", get_max());
-    printf("Current allocated memory: %llu (bytes)\n", get_current());
+    // printf("Total allocated memory: %llu (bytes)\n", get_all());
+    // printf("Max allocated memory: %llu (bytes)\n", get_max());
+    // printf("Current allocated memory: %llu (bytes)\n", get_current());
 }

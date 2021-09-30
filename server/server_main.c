@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
     close_server(info_ptr);
     fclose(data->file);
     my_free(info_ptr);
-    printf("Total allocated memory: %llu (bytes)\n", get_all());
-    printf("Max allocated memory: %llu (bytes)\n", get_max());
-    printf("Current allocated memory: %llu (bytes)\n", get_current());
+    // printf("Total allocated memory: %llu (bytes)\n", get_all());
+    // printf("Max allocated memory: %llu (bytes)\n", get_max());
+    // printf("Current allocated memory: %llu (bytes)\n", get_current());
 }

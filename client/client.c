@@ -25,7 +25,7 @@ void send_message(int32_t server_fd, char* request) {
         my_free(data);
 
         remain_data -= packet_size;
-        printf("⬆ Sent %d bytes of request... Remaining: %lu\n\n", packet_size, remain_data);
+        // printf("⬆ Sent %d bytes of request... Remaining: %lu\n\n", packet_size, remain_data);
 
     } while (remain_data > 0);
 }
@@ -42,7 +42,7 @@ char* receive_message(int32_t server_fd, long content_length) {
         memcpy(response_json + response_offset, response, receive_len);
         remain_data -= receive_len;
         response_offset += receive_len;
-        printf("⬇ Received %ld bytes of response... Remaining: %ld\n\n", receive_len, remain_data);
+        // printf("⬇ Received %ld bytes of response... Remaining: %ld\n\n", receive_len, remain_data);
     }
     response_json[response_offset] = '\0';
     return response_json;
