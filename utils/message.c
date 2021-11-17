@@ -19,13 +19,21 @@ char *build_client_json_request(query_info *info) {
     json_object_array_add(nodesArray, firstNode);
 
     if (info->has_relation) {
-        json_object *relation = json_object_new_string((char *) info->rel_name);
-        json_object_object_add(request, "relation", relation); 
+        build_json_relations(request, info->rel_names);
+        
+        node *current_labels = info->rel_nodes_labels->first;
+        node *current_props = info->rel_nodes_props->first;
 
-        json_object *secondNode = json_object_new_object(); 
-        build_json_node_labels(secondNode, info->rel_node_labels);
-        build_json_node_props(secondNode, info->rel_node_props);
-        json_object_array_add(nodesArray, secondNode); 
+        for (int i = 0; i < info->rel_nodes_labels->size; ++i) {
+            json_object *newNode = json_object_new_object(); 
+            build_json_node_labels(newNode, current_labels->value);
+            build_json_node_props(newNode, current_props->value);
+            json_object_array_add(nodesArray, newNode);
+
+            current_labels = current_labels->next;
+            current_props = current_props->next;
+        }
+        
     }
     if (strcmp(info->command_type, "set") == 0 || strcmp(info->command_type, "remove") == 0) {
         json_object *changedNode = json_object_new_object(); 
@@ -138,8 +146,9 @@ query_info *init_query_info() {
     query_info *info = my_alloc(sizeof(query_info));
     info->labels = init_list();
     info->props = init_list();
-    info->rel_node_labels = init_list();
-    info->rel_node_props = init_list();
+    info->rel_names = init_list();
+    info->rel_nodes_labels = init_list();
+    info->rel_nodes_props = init_list();
     info->changed_labels = init_list();
     info->changed_props = init_list();
     info->has_relation = false;
@@ -156,8 +165,8 @@ match_result *init_match_result() {
 void free_query_info(query_info *info) {
     free_list(info->labels, false);
     free_list(info->props, true);
-    free_list(info->rel_node_labels, false);
-    free_list(info->rel_node_props, true);
+    free_list(info->rel_nodes_labels, false);
+    free_list(info->rel_nodes_props, true);
     free_list(info->changed_labels, false);
     free_list(info->changed_props, true);
     my_free(info);
@@ -165,27 +174,39 @@ void free_query_info(query_info *info) {
 
 query_info *parse_client_json_request(char *json_request) {
     query_info *info = init_query_info();
-    json_object *request = json_tokener_parse(json_request);
+    json_tokener *tok = json_tokener_new();
+    json_tokener_reset(tok);
+    // json_object *request = json_tokener_parse(json_request);
+    json_object *request = json_tokener_parse_ex(tok, json_request, strlen(json_request));
     json_object *command;
     if (!json_object_object_get_ex(request, "command", &command))
         return NULL;
     strcpy(info->command_type, json_object_get_string(command));
-    
+
     json_object *json_nodes;
     json_object_object_get_ex(request, "nodes", &json_nodes);
     json_object *first_node = json_object_array_get_idx(json_nodes, 0);
     parse_json_node_labels(first_node, info->labels);
     parse_json_node_props(first_node, info->props);
     
-    json_object *relation;
-    if (json_object_object_get_ex(request, "relation", &relation)) {
-        
-        strcpy(info->rel_name, json_object_get_string(relation));
+    json_object *relations;
+    if (json_object_object_get_ex(request, "relations", &relations)) {
+        parse_json_relations(relations, info->rel_names);
         info->has_relation = true;
         
-        json_object *second_node = json_object_array_get_idx(json_nodes, 1);
-        parse_json_node_labels(second_node, info->rel_node_labels);
-        parse_json_node_props(second_node, info->rel_node_props);
+        size_t nodes_size; 
+        size_t i;
+        nodes_size = json_object_array_length(json_nodes);
+        for (i=1;i<nodes_size; i++) {
+            json_object *new_node = json_object_array_get_idx(json_nodes, i);
+            linked_list *new_labels = init_list();
+            linked_list *new_props = init_list();
+            add_last(info->rel_nodes_labels, new_labels);
+            add_last(info->rel_nodes_props, new_props);
+
+            parse_json_node_labels(new_node, new_labels);
+            parse_json_node_props(new_node, new_props);
+        }
     }
     
     json_object *changed_node;
@@ -193,6 +214,10 @@ query_info *parse_client_json_request(char *json_request) {
         parse_json_node_labels(changed_node, info->changed_labels);
         parse_json_node_props(changed_node, info->changed_props);
     }
+
+    json_tokener_reset(tok);
+    json_tokener_free(tok);
+    json_object_put(request);
 
     return info;
 }
@@ -218,7 +243,7 @@ char *build_json_match_response(linked_list *match_results, uint64_t number) {
 
     char *message = strdup(json_object_to_json_string(response));
     json_object_put(response);
-    free_match_result(match_results);
+    // free_match_result(match_results);
     return message;
 }
 
@@ -277,6 +302,21 @@ void free_match_result(linked_list *match_results) {
     }
 }
 
+static void parse_json_relations(json_object *json_relations, linked_list *rel_names) {
+    size_t relations_size; 
+    size_t i; 
+
+    relations_size = json_object_array_length(json_relations);
+    
+    for (i=0;i<relations_size; i++) {
+        json_object *cur_json_relation = json_object_array_get_idx(json_relations, i);
+        json_object *name;
+
+        json_object_object_get_ex(cur_json_relation, "name", &name);
+        add_last(rel_names, json_object_get_string(name)); 
+    }
+}
+
 static void parse_json_node_labels(json_object *json_node, linked_list *labels) {
     size_t labels_size; 
     size_t i; 
@@ -318,6 +358,21 @@ static void parse_json_node_props(json_object *json_node, linked_list *props) {
         strcpy(current_prop->value, json_object_get_string(value));
         add_last(props, current_prop); 
     }
+}
+
+static void build_json_relations(json_object *jnode, linked_list *relations_list) {
+    node *current_relation = relations_list->first;
+    json_object *relationsArray = json_object_new_array();
+    for (int i = 0; i< relations_list->size; ++i) {
+        json_object * jsonRelation = json_object_new_object(); 
+        json_object *value = json_object_new_string((char *) current_relation->value);
+        json_object_object_add(jsonRelation, "name", value);
+        json_object_array_add(relationsArray, jsonRelation); 
+
+        current_relation = current_relation->next; 
+    }
+
+    json_object_object_add(jnode, "relations", relationsArray); 
 }
 
 static void build_json_node_labels(json_object *jnode, linked_list *labels_list) {  

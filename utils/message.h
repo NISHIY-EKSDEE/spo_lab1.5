@@ -9,9 +9,10 @@ struct query_info {
     linked_list *labels;
     linked_list *props;
     bool has_relation;
-    char rel_name[RELATION_NAME_SIZE];
-    linked_list *rel_node_labels;
-    linked_list *rel_node_props;
+    // char rel_name[RELATION_NAME_SIZE];
+    linked_list *rel_names;
+    linked_list *rel_nodes_labels;
+    linked_list *rel_nodes_props;
     linked_list *changed_labels;
     linked_list *changed_props;
 };
@@ -54,9 +55,13 @@ void free_match_result(linked_list *match_results);
 
 bool by_property_values(void *value, char *to_find_key, char* to_find_value);
 
+static void parse_json_relations(json_object *json_relations, linked_list *rel_names);
+
 static void parse_json_node_labels(json_object *json_node, linked_list *labels); 
 
 static void parse_json_node_props(json_object *json_node, linked_list *props);
+
+static void build_json_relations(json_object *jnode, linked_list *relations_list);
 
 static void build_json_node_labels(json_object *jnode, linked_list *labels_list);
 

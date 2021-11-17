@@ -87,13 +87,20 @@ query_info *get_query_info(cypher_parse_result_t *parsing_result) {
     const cypher_astnode_t *path = cypher_ast_pattern_get_path(pattern, 0);
     const cypher_astnode_t *node = cypher_ast_pattern_path_get_element(path, 0);
     set_labels_and_props(node, query_info->labels, query_info->props);
-    if (cypher_ast_pattern_path_nelements(path) == 3) {
+    int nElements = cypher_ast_pattern_path_nelements(path);
+    if (nElements >= 3) {
         query_info->has_relation = true;
-        const cypher_astnode_t *relation = cypher_ast_pattern_path_get_element(path, 1);
-        const cypher_astnode_t *rel_type = cypher_ast_rel_pattern_get_reltype(relation, 0);
-        memcpy(query_info->rel_name, cypher_ast_reltype_get_name(rel_type), RELATION_NAME_SIZE);
-        const cypher_astnode_t *rel_node = cypher_ast_pattern_path_get_element(path, 2);
-        set_labels_and_props(rel_node, query_info->rel_node_labels, query_info->rel_node_props);
+        for(int i = 1; i < nElements; i = i+2) {
+            const cypher_astnode_t *relation = cypher_ast_pattern_path_get_element(path, i);
+            const cypher_astnode_t *rel_type = cypher_ast_rel_pattern_get_reltype(relation, 0);
+            add_last(query_info->rel_names, (void *) cypher_ast_reltype_get_name(rel_type));
+            const cypher_astnode_t *rel_node = cypher_ast_pattern_path_get_element(path, i+1);
+            linked_list *new_labels = init_list();
+            linked_list *new_props = init_list();
+            add_last(query_info->rel_nodes_labels, new_labels);
+            add_last(query_info->rel_nodes_props, new_props);
+            set_labels_and_props(rel_node, new_labels, new_props);
+        }
     }
     return query_info;
 }

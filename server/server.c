@@ -40,7 +40,7 @@ void receive_message(char *client_message_part, int32_t accepted_socket, char *r
         long len = recv(accepted_socket, client_message_part, BUFSIZ, 0);
         strcat(request_json, client_message_part);
         remain_data -= len;
-        // printf("⬇ Received %ld bytes of request... Remaining: %ld\n\n", len, remain_data);
+        //printf("⬇ Received %ld bytes of request... Remaining: %ld\n\n", len, remain_data);
     }
     puts(request_json);
 }
@@ -102,14 +102,20 @@ _Noreturn void manage_connections(server_info *info) {
     }
 }
 
-char *execute_command(query_info *info, datafile *data) {
-    char *command = info->command_type;
+char *execute_command(query_info *q_info, datafile *data) {
+    char *command = q_info->command_type;
     uint64_t number = 0;
+    relation_info *info = init_relation_info(q_info, 0);
     if (strcmp(command, "match") == 0) {
         //show nodes with all labels and attributes with indexes
         linked_list *match_results = init_list();
         linked_list *node_ptr = init_list();
-        number = match(info, data, node_ptr, match_results, true);
+        if(q_info->has_relation) {
+            number = match_query_info(q_info, data, node_ptr, match_results);
+        } else {
+            number = match(info, data, node_ptr, match_results, true);
+        }
+
         free_list(node_ptr, true);
         return build_json_match_response(match_results, number);
     }
@@ -171,12 +177,12 @@ char *execute_command(query_info *info, datafile *data) {
         //attributes and labels modification of the matching nodes
         linked_list *node_ptr = init_list();
         number = match(info, data, node_ptr, NULL, true);
-        if (info->changed_labels->size > 0) {
-            set_new_labels(data, node_ptr, info->changed_labels);
-            return build_json_set_or_remove_response("set", "labels", info->changed_labels, number);
-        } else if (info->changed_props->size > 0) {
-            set_new_attributes(data, node_ptr, info->changed_props);
-            return build_json_set_or_remove_response("set", "props", info->changed_props, number);
+        if (q_info->changed_labels->size > 0) {
+            set_new_labels(data, node_ptr, q_info->changed_labels);
+            return build_json_set_or_remove_response("set", "labels", q_info->changed_labels, number);
+        } else if (q_info->changed_props->size > 0) {
+            set_new_attributes(data, node_ptr, q_info->changed_props);
+            return build_json_set_or_remove_response("set", "props", q_info->changed_props, number);
         }
         return NULL;
     }
@@ -184,12 +190,12 @@ char *execute_command(query_info *info, datafile *data) {
         //attributes and labels modification of the matching nodes
         linked_list *node_ptr = init_list();
         match(info, data, node_ptr, NULL, true);
-        if (info->changed_labels->size > 0) {
-            number = remove_labels(data, node_ptr, info->changed_labels);
-            return build_json_set_or_remove_response("remove", "labels", info->changed_labels, number);
-        } else if (info->changed_props->size > 0) {
-            number = remove_attributes(data, node_ptr, info->changed_props);
-            return build_json_set_or_remove_response("remove", "props", info->changed_props, number);
+        if (q_info->changed_labels->size > 0) {
+            number = remove_labels(data, node_ptr, q_info->changed_labels);
+            return build_json_set_or_remove_response("remove", "labels", q_info->changed_labels, number);
+        } else if (q_info->changed_props->size > 0) {
+            number = remove_attributes(data, node_ptr, q_info->changed_props);
+            return build_json_set_or_remove_response("remove", "props", q_info->changed_props, number);
         }
         return NULL;
     }
